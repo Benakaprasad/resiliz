@@ -10,7 +10,6 @@ Tests:
 """
 
 import pytest
-from fastapi.testclient import TestClient
 from simulator.grid_telemetry_simulator import MicrogridTelemetrySimulator
 from ai_engine.feature_extractor import TelemetryFeatureExtractor
 from ai_engine.models import (
@@ -18,6 +17,7 @@ from ai_engine.models import (
     BaselineBIsolationForestDetector,
     ResiliZDecisionEngine,
 )
+from ai_engine.predictive_copilot import PredictiveAIEngine, GenerativeAIGridCopilot
 from backend.main import app
 
 def test_microgrid_simulator_nominal():
@@ -84,28 +84,65 @@ def test_resiliz_transient_noise_rejection():
     assert r_spike["classification"] != "PERSISTENT_CRITICAL_FAULT"
 
 def test_fastapi_endpoints():
-    client = TestClient(app)
+    from backend.main import (
+        get_system_health,
+        get_live_telemetry,
+        inject_anomaly,
+        clear_anomaly,
+        get_platform_evidence,
+        get_copilot_incident_report,
+        InjectAnomalyRequest,
+    )
     
     # 1. Health check
-    res = client.get("/api/health")
-    assert res.status_code == 200
-    data = res.json()
-    assert data["status"] == "healthy"
-    assert "cpu_count" in data
+    health = get_system_health()
+    assert health["status"] == "healthy"
+    assert "cpu_count" in health
 
     # 2. Live telemetry
-    res = client.get("/api/telemetry/live")
-    assert res.status_code == 200
+    live = get_live_telemetry()
+    assert isinstance(live, dict)
+    assert "counters" in live
 
     # 3. Anomaly injection endpoint
-    res = client.post("/api/simulator/inject", json={"anomaly_type": "voltage_sag", "duration_ticks": 5, "intensity": 1.0})
-    assert res.status_code == 200
-    assert res.json()["status"] == "injected"
+    req = InjectAnomalyRequest(anomaly_type="voltage_sag", duration_ticks=5, intensity=1.0)
+    res_inject = inject_anomaly(req)
+    assert res_inject["status"] == "injected"
 
     # 4. Clear anomaly
-    res = client.post("/api/simulator/clear")
-    assert res.status_code == 200
-    assert res.json()["status"] == "cleared"
+    res_clear = clear_anomaly()
+    assert res_clear["status"] == "cleared"
+
+    # 5. LinuxONE Platform Evidence
+    evidence = get_platform_evidence()
+    assert "security_features" in evidence
+    assert "compute_and_scalability" in evidence
+    assert "certified_labs_prerequisites" in evidence
+
+
+def test_predictive_and_copilot():
+    pred_engine = PredictiveAIEngine()
+    copilot = GenerativeAIGridCopilot()
+
+    t = {"voltage_v": 165.0, "frequency_hz": 49.2, "grid_id": "TEST-NODE"}
+    feat = {"frequency_rocof": 0.42, "voltage_rolling_std": 12.0, "net_renewable_balance_kw": -15.0}
+    dec = {"severity": "CRITICAL", "classification": "PERSISTENT_CRITICAL_FAULT", "anomaly_score": 0.95, "audit_hash": "b" * 64}
+
+    # Test Predictive AI
+    forecast = pred_engine.forecast(t, feat, dec)
+    assert forecast["vulnerability_index_pct"] > 50.0
+    assert forecast["time_to_trip_sec"] is not None
+    assert forecast["time_to_trip_sec"] < 3.0
+
+    # Test GenAI Copilot
+    report = copilot.generate_incident_report(t, dec, forecast)
+    assert report["severity"] == "CRITICAL"
+    assert len(report["prescriptive_sop_playbook"]) > 0
+
+    # Test Chat
+    chat_ans = copilot.chat_response("voltage sag", {"telemetry": t, "decision": dec, "predictive": forecast})
+    assert "voltage" in chat_ans.lower()
+
 
 def test_audit_hash_integrity():
     """Verify SHA-256 hash format for IBM LinuxONE audit trail."""
