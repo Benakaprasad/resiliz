@@ -158,11 +158,13 @@ Generate a concise 3-point Field Dispatch Directive:
             "model_engine": self.model_name,
             "bus_id": bus_id,
             "fault_class": fault_class,
+            "severity": severity,
             "confidence_pct": confidence,
             "latency_ms": latency_ms,
             "scada_saved_ms": 3000.0 - latency_ms,
             "prompt_template": prompt_used.strip(),
             "directive_3_points": [point1, point2, point3],
+            "prescriptive_sop_playbook": [point1, point2, point3],
             "confidential_enclave": "IBM Secure Execution for Linux (s390x)",
             "differential_privacy": "IBM diffprivlib active (Laplace epsilon=1.0)",
             "audit_hash": decision.get("audit_hash", "0" * 64),
@@ -204,6 +206,14 @@ Generate a concise 3-point Field Dispatch Directive:
                 f"Bus-{bus} Harmonic Status: THD is {thd}%. "
                 + (f"CRITICAL: Exceeds IEEE 519 5.0% threshold! Solid-state relay tripped in {lat}ms. Inverter harmonic resonance detected."
                    if thd > 5.0 else "Harmonic levels are nominal (<2.5% THD).")
+            )
+        elif "voltage" in p_lower or "sag" in p_lower or "unbalance" in p_lower or "fault" in p_lower:
+            return (
+                f"Voltage Diagnostic for Bus-{bus}:\n"
+                f"- Line Voltage: {t.get('voltage_v', 230.0):.1f}V (Phase Va={t.get('va_pu', 1.0)} pu, Vb={t.get('vb_pu', 1.0)} pu, Vc={t.get('vc_pu', 1.0)} pu).\n"
+                f"- State: {dec.get('severity', 'NORMAL')} | Classification: {fault}.\n"
+                f"- Fast-path solid-state protection response: {lat}ms.\n"
+                f"- Recommendation: Execute IEEE 1547 reactive power voltage support Q(V) curve or inspect feeder lateral fuses."
             )
         else:
             return (

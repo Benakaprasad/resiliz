@@ -62,25 +62,30 @@ def test_baseline_a_thresholds():
 
 def test_resiliz_transient_noise_rejection():
     """Verify that ResiliZ Decision Engine filters 1-sample transient glitches."""
+    import random
+    rng = random.Random(42)
     iso = BaselineBIsolationForestDetector()
-    # Train with simple synthetic normal vectors
-    normal_vecs = [[230.0, 230.0, 0.5, 1.0, 50.0, 50.0, 0.01, 15.0, 15.0, 25.0, 5.0, 0.95, 0.0, 75.0] for _ in range(50)]
+    # Train with realistic normal vectors
+    normal_vecs = [
+        [230.0 + rng.uniform(-1.0, 1.0), 230.0, 0.5, 1.0, 50.0 + rng.uniform(-0.03, 0.03), 50.0, 0.01, 15.0, 15.0, 25.0, 5.0, 0.95, 0.0, 75.0]
+        for _ in range(100)
+    ]
     iso.train(normal_vecs)
 
     resiliz = ResiliZDecisionEngine(isolation_forest=iso, persistence_window=5, persistence_threshold=3)
     
     # 1. Nominal tick
-    nom_t = {"voltage_v": 230.0, "frequency_hz": 50.0, "current_a": 15.0, "power_factor": 0.95}
+    nom_t = {"voltage_v": 230.0, "va": 230.0, "vb": 230.0, "vc": 230.0, "frequency_hz": 50.0, "current_a": 15.0, "power_factor": 0.95, "thd_pct": 1.5, "bus_id": 14}
     nom_feat = {"frequency_rocof": 0.01, "net_renewable_balance_kw": 0.0}
     r1 = resiliz.evaluate(nom_t, nom_feat, normal_vecs[0])
     assert r1["severity"] in ("NORMAL", "ADVISORY")
 
     # 2. Injected 1-sample spike with slight voltage deviation
-    spike_t = {"voltage_v": 248.0, "frequency_hz": 50.1, "current_a": 35.0, "power_factor": 0.90}
+    spike_t = {"voltage_v": 248.0, "va": 248.0, "vb": 230.0, "vc": 230.0, "frequency_hz": 50.1, "current_a": 35.0, "power_factor": 0.90, "thd_pct": 3.0, "bus_id": 14}
     spike_feat = {"frequency_rocof": 0.05, "net_renewable_balance_kw": -5.0}
     spike_vec = [248.0, 235.0, 5.0, 15.0, 50.1, 50.02, 0.05, 35.0, 18.0, 30.0, 8.0, 0.90, -5.0, 75.0]
     r_spike = resiliz.evaluate(spike_t, spike_feat, spike_vec)
-    # Temporal persistence should prevent single spike from being marked as PERSISTENT_CRITICAL_FAULT
+    # Temporal persistence should prevent single spike from causing unconfirmed trip
     assert r_spike["classification"] != "PERSISTENT_CRITICAL_FAULT"
 
 def test_fastapi_endpoints():

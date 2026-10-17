@@ -8,31 +8,27 @@
 
 ---
 
-## 1. System Architecture
+## 1. System Architecture: Unified Fast Path + Smart Path
+ 
+ ResiliZ unifies **Lab 1 (Multi-Model Predictive AI)** and **Lab 2 (Predictive + Generative AI)** into a dual-speed pipeline running on **IBM LinuxONE (s390x)**:
 
-```
-[ Renewable Microgrid Simulator ]
-      │ (Voltage, Current, Frequency, Solar PV, Battery SoC, Load)
-      ▼
-[ Apache Kafka / In-Memory Stream ] ─── Topic: microgrid-telemetry
-      │
-      ▼
-[ AI Detection Service & Decision Layer ]
-      ├─ Feature Extractor (Rolling Statistics, ROCOF |df/dt|, P/Q ratios, Net Balance)
-      ├─ Isolation Forest (Unsupervised statistical outlier scoring)
-      ├─ Temporal Persistence Filter (k-of-N confirmation window, transient noise suppression)
-      ├─ Microgrid Physical Context Rules (IEEE 1547 envelopes, solar ramp, islanding)
-      └─ IBM LinuxONE Audit Hasher (Chained SHA-256 for non-repudiation)
-      │
-      ├──► [ PostgreSQL / SQLite ] ─── Telemetry history, prioritized alerts, audit logs
-      │
-      ▼
-[ FastAPI Backend ] ◄── WebSocket (2Hz real-time stream) & REST APIs
-      │
-      ▼
-[ React + Vite Dashboard ] ─── Live telemetry meters, 3-way decision comparison,
-                                interactive anomaly injector, benchmark reports
-```
+ ```
+                             ┌─► [Track 1: Lab 1 Multi-Model Fast Path (<20ms)]
+                             │   ├─ Stage A: Unsupervised Isolation Forest (Zero-Day Transients)
+                             │   ├─ Stage B: Supervised Fault Classifier (Unbalance / Harmonics / Islanding)
+                             │   └─ Immediate Solid-State Relay Trip (IEEE 1547 Feeder Isolation)
+ [IEEE 33-Bus Inverter Stream]
+ (Va, Vb, Vc, Ia, Ib, Ic, THD)
+                             │
+                             └─► [Track 2: Lab 2 Predictive + Generative AI Smart Path (~1.5s)]
+                                 ├─ Vulnerability Radar & TTC (Time-to-Critical) Countdown
+                                 ├─ Structured Context Engine + IEEE 1547 RAG Manual
+                                 └─ IBM Granite Discom Field Dispatch Directive (Relay / Diagnosis / SOP)
+ ```
+
+- **Confidential Telemetry Processing**: IEEE 33-Bus 3-phase AC physics ($V_a, V_b, V_c, I_a, I_b, I_c$, Freq, $THD\%$) obfuscated via **IBM `diffprivlib`** ($\epsilon=1.0$) with hardware-accelerated **CPACF SHA-256** audit chaining.
+- **Legacy SCADA vs ResiliZ Split-Screen Race**: Contrasts legacy 3,000ms polling latency with ResiliZ's 16.4ms sub-cycle isolation.
+
 
 ---
 
@@ -152,7 +148,25 @@ PYTHONPATH=. ./.venv/bin/python ai_engine/benchmark.py
 
 ---
 
-## 7. Deployment on IBM LinuxONE (s390x)
+---
 
-See [`docs/IBM_LINUXONE_DEPLOYMENT.md`](docs/IBM_LINUXONE_DEPLOYMENT.md) for detailed instructions on multi-arch Docker builds, CPACF hardware cryptographic acceleration, and IBM Secure Execution enclaves.
+## 7. LinuxONE (s390x) Platform Verification & Screenshot Evidence
+
+Judges evaluate platform capabilities using screenshots as evidence across these mandatory areas:
+
+| Rubric Requirement | Terminal Command / Verification Step | What It Proves to Judges |
+| :--- | :--- | :--- |
+| **Prerequisite Labs** | Open Jupyter on L1CC and screenshot completed Lab 1 & Lab 2 cells | Proof of mandatory baseline completion. |
+| **Compute Resources** | `uname -a && lscpu` | Proves native s390x byte order, IBM/S390 CPU family, and dedicated IFL cores. |
+| **Containerization** | `docker ps` + `docker inspect <id> \| grep Architecture` | Proves Kafka, FastAPI, and AI run in native `"Architecture": "s390x"` containers. |
+| **Scalability & Load** | `htop` / `docker stats` during 5,000+ msgs/sec | Proves multi-worker LinuxONE CPU scaling under high I/O stress without choking. |
+| **Security & Crypto** | `lscpu \| grep -i cpacf` + `/api/audit/trail` diffprivlib JSON | Proves hardware CPACF cryptographic extensions + Differential Privacy ($\epsilon=1.0$). |
+| **Real-Time Latency Race** | Split-Screen UI: SCADA (3,000ms) vs ResiliZ (16.4ms) | Proves sub-20ms trip isolates faults 2.9 seconds before legacy SCADA alarm. |
+
+---
+
+## 8. Deployment on IBM LinuxONE (s390x)
+
+See [`docs/IBM_LINUXONE_DEPLOYMENT.md`](docs/IBM_LINUXONE_DEPLOYMENT.md) for step-by-step instructions on multi-arch Docker builds, CPACF hardware cryptographic acceleration, and IBM Secure Execution enclaves.
+
 
