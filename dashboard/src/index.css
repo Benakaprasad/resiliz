@@ -1,16 +1,18 @@
 :root {
-  --bg-primary: #070b12;
-  --bg-card: rgba(13, 20, 36, 0.75);
-  --bg-card-hover: rgba(22, 34, 60, 0.85);
-  --border-subtle: rgba(56, 189, 248, 0.15);
-  --border-focus: rgba(6, 182, 212, 0.5);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --cyan-neon: #00f2fe;
-  --blue-neon: #4facfe;
-  --emerald-neon: #10b981;
-  --amber-neon: #f59e0b;
-  --rose-neon: #ff0055;
+  --bg-primary: #0a0e17;
+  --bg-surface: #111827;
+  --bg-surface-hover: #1f2937;
+  --border-subtle: #1f2937;
+  --border-focus: #374151;
+  --text-main: #f9fafb;
+  --text-muted: #9ca3af;
+  --text-dim: #6b7280;
+  
+  --color-normal: #10b981;
+  --color-warning: #f59e0b;
+  --color-critical: #ef4444;
+  --color-info: #3b82f6;
+  --color-slate: #64748b;
 }
 
 * {
@@ -21,104 +23,51 @@
 
 body {
   background-color: var(--bg-primary);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-  background-attachment: fixed;
   color: var(--text-main);
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
 code, pre, .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
 }
 
-/* 10/10 Futuristic Glass Cards */
-.cyber-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* Industrial Utility Card */
+.scada-panel {
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  transition: all 0.25s ease-in-out;
+  border-radius: 8px;
+  transition: border-color 0.15s ease;
 }
 
-.cyber-card:hover {
-  border-color: rgba(6, 182, 212, 0.35);
-  box-shadow: 0 12px 40px 0 rgba(6, 182, 212, 0.12);
+.scada-panel:hover {
+  border-color: var(--border-focus);
 }
 
-.cyber-card-glow {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(6, 182, 212, 0.4);
-  border-radius: 14px;
-  box-shadow: 0 0 25px rgba(6, 182, 212, 0.18);
+/* Subtle Status Indicators */
+.status-normal {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-/* Neon Glow Badges */
-.badge-normal {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+.status-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
-.badge-advisory {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+.status-critical {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
-.badge-warning {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
-}
-
-.badge-critical {
-  background: rgba(244, 63, 94, 0.25);
-  color: #fda4af;
-  border: 1px solid rgba(244, 63, 94, 0.5);
-  animation: pulseNeonCritical 1.4s infinite;
-}
-
-@keyframes pulseNeonCritical {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 24px rgba(244, 63, 94, 0.8), inset 0 0 12px rgba(244, 63, 94, 0.4);
-  }
-}
-
-/* Live Pulse Radar Ring */
-.radar-ring {
-  position: relative;
-}
-.radar-ring::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 2px solid #00f2fe;
-  animation: radarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-@keyframes radarPing {
-  75%, 100% {
-    transform: translate(-50%, -50%) scale(2.2);
-    opacity: 0;
-  }
+.status-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 /* Custom Scrollbars */
@@ -127,12 +76,23 @@ code, pre, .font-mono {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #080d1a;
+  background: #0a0e17;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: #1f2937;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #374151;
+}
+
+/* Pipeline Flow Animation */
+@keyframes flowPulse {
+  0% { transform: translateX(0); opacity: 0.2; }
+  50% { opacity: 0.8; }
+  100% { transform: translateX(100%); opacity: 0.2; }
+}
+
+.flow-dot {
+  animation: flowPulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
