@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: resiliz
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt && cd dashboard && npm install && npm run build && cd .."
+    startCommand: "PYTHONPATH=. uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
