@@ -87,108 +87,118 @@ async def telemetry_background_worker():
     db = SessionLocal()
     try:
         while state.is_running:
-            # 1. Step simulator
-            telemetry = state.simulator.step()
-            state.counters["total_ticks"] += 1
+            try:
+                # 1. Step simulator
+                telemetry = state.simulator.step()
+                state.counters["total_ticks"] += 1
 
-            # 2. Extract features
-            extracted = state.feature_extractor.update_and_extract(telemetry)
-            features = extracted["features"]
-            vector = extracted["feature_vector"]
+                # 2. Extract features
+                extracted = state.feature_extractor.update_and_extract(telemetry)
+                features = extracted["features"]
+                vector = extracted["feature_vector"]
 
-            # 3. Stream to Kafka (if broker available)
-            state.kafka_producer.send(telemetry)
+                # 3. Stream to Kafka (if broker available)
+                state.kafka_producer.send(telemetry)
 
-            # 4. Run Competitor Models & Predictive AI
-            res_a = state.model_a.predict(telemetry)
-            res_b = state.model_b.predict(vector)
-            res_z = state.resiliz.evaluate(telemetry, features, vector)
-            pred_res = state.predictive_ai.forecast(telemetry, features, res_z)
+                # 4. Run Competitor Models & Predictive AI
+                res_a = state.model_a.predict(telemetry)
+                res_b = state.model_b.predict(vector)
+                res_z = state.resiliz.evaluate(telemetry, features, vector)
+                pred_res = state.predictive_ai.forecast(telemetry, features, res_z)
 
-            state.latest_telemetry = telemetry
-            state.latest_features = features
-            state.latest_baseline_a = res_a
-            state.latest_baseline_b = res_b
-            state.latest_decision = res_z
-            state.latest_predictive = pred_res
+                state.latest_telemetry = telemetry
+                state.latest_features = features
+                state.latest_baseline_a = res_a
+                state.latest_baseline_b = res_b
+                state.latest_decision = res_z
+                state.latest_predictive = pred_res
 
-            if res_z.get("is_transient_filtered"):
-                state.counters["transients_filtered"] += 1
+                if res_z.get("is_transient_filtered"):
+                    state.counters["transients_filtered"] += 1
 
-            sev = res_z.get("severity", "NORMAL")
-            if sev == "CRITICAL":
-                state.counters["critical_alerts"] += 1
-            elif sev == "WARNING":
-                state.counters["warning_alerts"] += 1
-            elif sev == "ADVISORY":
-                state.counters["advisory_alerts"] += 1
+                sev = res_z.get("severity", "NORMAL")
+                if sev == "CRITICAL":
+                    state.counters["critical_alerts"] += 1
+                elif sev == "WARNING":
+                    state.counters["warning_alerts"] += 1
+                elif sev == "ADVISORY":
+                    state.counters["advisory_alerts"] += 1
 
-            # 5. Persist to Database with IBM diffprivlib anonymized power
-            rec = TelemetryRecord(
-                grid_id=telemetry["grid_id"],
-                bus_id=telemetry.get("bus_id", 14),
-                tick=telemetry["tick"],
-                voltage_v=telemetry["voltage_v"],
-                va=telemetry.get("va", telemetry["voltage_v"]),
-                vb=telemetry.get("vb", telemetry["voltage_v"]),
-                vc=telemetry.get("vc", telemetry["voltage_v"]),
-                current_a=telemetry["current_a"],
-                thd_pct=telemetry.get("thd_pct", 1.8),
-                frequency_hz=telemetry["frequency_hz"],
-                active_power_kw=telemetry["active_power_kw"],
-                diffpriv_power_kw=res_z.get("diffpriv_active_power_kw", telemetry["active_power_kw"]),
-                reactive_power_kvar=telemetry["reactive_power_kvar"],
-                power_factor=telemetry["power_factor"],
-                solar_pv_kw=telemetry["solar_pv_kw"],
-                battery_soc_pct=telemetry["battery_soc_pct"],
-                battery_power_kw=telemetry["battery_power_kw"],
-                grid_connected=telemetry["grid_connected"],
-                ground_truth_label=telemetry.get("ground_truth_label", "NORMAL"),
-            )
-            db.add(rec)
-
-            if sev in ("WARNING", "CRITICAL") or res_z.get("is_transient_filtered"):
-                alert = AnomalyAlert(
+                # 5. Persist to Database with IBM diffprivlib anonymized power
+                rec = TelemetryRecord(
                     grid_id=telemetry["grid_id"],
-                    tick=telemetry["tick"],
-                    severity=sev,
-                    classification=res_z.get("classification", "UNKNOWN"),
-                    anomaly_score=res_z.get("anomaly_score", 0.0),
-                    is_persistent=res_z.get("is_persistent", False),
-                    is_transient_filtered=res_z.get("is_transient_filtered", False),
-                    explanations_json=json.dumps(res_z.get("explanations", [])),
-                    contributing_features_json=json.dumps(res_z.get("top_contributing_features", [])),
-                    audit_hash=res_z.get("audit_hash", ""),
+                    bus_id=int(telemetry.get("bus_id", 14)),
+                    tick=int(telemetry["tick"]),
+                    voltage_v=float(telemetry["voltage_v"]),
+                    va=float(telemetry.get("va", telemetry["voltage_v"])),
+                    vb=float(telemetry.get("vb", telemetry["voltage_v"])),
+                    vc=float(telemetry.get("vc", telemetry["voltage_v"])),
+                    current_a=float(telemetry["current_a"]),
+                    thd_pct=float(telemetry.get("thd_pct", 1.8)),
+                    frequency_hz=float(telemetry["frequency_hz"]),
+                    active_power_kw=float(telemetry["active_power_kw"]),
+                    diffpriv_power_kw=float(res_z.get("diffpriv_active_power_kw", telemetry["active_power_kw"])),
+                    reactive_power_kvar=float(telemetry["reactive_power_kvar"]),
+                    power_factor=float(telemetry["power_factor"]),
+                    solar_pv_kw=float(telemetry["solar_pv_kw"]),
+                    battery_soc_pct=float(telemetry["battery_soc_pct"]),
+                    battery_power_kw=float(telemetry["battery_power_kw"]),
+                    grid_connected=bool(telemetry["grid_connected"]),
+                    ground_truth_label=str(telemetry.get("ground_truth_label", "NORMAL")),
                 )
-                db.add(alert)
+                db.add(rec)
 
-            # Commit in batches of 10 or when alert arrives
-            if telemetry["tick"] % 10 == 0 or sev in ("WARNING", "CRITICAL"):
-                db.commit()
+                if sev in ("WARNING", "CRITICAL") or res_z.get("is_transient_filtered"):
+                    alert = AnomalyAlert(
+                        grid_id=str(telemetry["grid_id"]),
+                        tick=int(telemetry["tick"]),
+                        severity=str(sev),
+                        classification=str(res_z.get("classification", "UNKNOWN")),
+                        anomaly_score=float(res_z.get("anomaly_score", 0.0)),
+                        is_persistent=bool(res_z.get("is_persistent", False)),
+                        is_transient_filtered=bool(res_z.get("is_transient_filtered", False)),
+                        explanations_json=json.dumps(res_z.get("explanations", [])),
+                        contributing_features_json=json.dumps(res_z.get("top_contributing_features", [])),
+                        audit_hash=str(res_z.get("audit_hash", "")),
+                    )
+                    db.add(alert)
 
-            # 6. Broadcast to connected WebSockets
-            if state.active_websockets:
-                payload = {
-                    "type": "TELEMETRY_UPDATE",
-                    "telemetry": telemetry,
-                    "features": features,
-                    "decision": res_z,
-                    "predictive": pred_res,
-                    "baseline_a": res_a,
-                    "baseline_b": res_b,
-                    "counters": state.counters,
-                    "active_anomaly": state.simulator.active_anomaly,
-                    "anomaly_remaining": state.simulator.anomaly_remaining_ticks,
-                }
-                dead_connections = []
-                for ws in state.active_websockets:
-                    try:
-                        await ws.send_json(payload)
-                    except Exception:
-                        dead_connections.append(ws)
-                for dead in dead_connections:
-                    if dead in state.active_websockets:
-                        state.active_websockets.remove(dead)
+                # Commit in batches of 10 or when alert arrives
+                if telemetry["tick"] % 10 == 0 or sev in ("WARNING", "CRITICAL"):
+                    db.commit()
+
+                # 6. Broadcast to connected WebSockets
+                if state.active_websockets:
+                    payload = {
+                        "type": "TELEMETRY_UPDATE",
+                        "telemetry": telemetry,
+                        "features": features,
+                        "decision": res_z,
+                        "predictive": pred_res,
+                        "baseline_a": res_a,
+                        "baseline_b": res_b,
+                        "counters": state.counters,
+                        "active_anomaly": state.simulator.active_anomaly,
+                        "anomaly_remaining": state.simulator.anomaly_remaining_ticks,
+                    }
+                    dead_connections = []
+                    for ws in state.active_websockets:
+                        try:
+                            await ws.send_json(payload)
+                        except Exception:
+                            dead_connections.append(ws)
+                    for dead in dead_connections:
+                        if dead in state.active_websockets:
+                            state.active_websockets.remove(dead)
+
+            except Exception as loop_err:
+                import traceback
+                print(f"Error in telemetry loop: {loop_err}")
+                traceback.print_exc()
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
 
             await asyncio.sleep(0.5)  # 2 Hz telemetry stream
     finally:

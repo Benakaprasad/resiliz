@@ -147,7 +147,7 @@ class BaselineBIsolationForestDetector:
         pred = self.model.predict(X)[0]
         decision_func = self.model.decision_function(X)[0]
         normalized_score = float(max(0.0, min(1.0, 0.5 - decision_func * 2.0)))
-        is_anomaly = (pred == -1)
+        is_anomaly = bool(pred == -1)
 
         latency_ms = (time.perf_counter() - t0) * 1000.0
         return {
@@ -370,21 +370,21 @@ class ResiliZDecisionEngine:
 
         return {
             "model": "ResiliZ Multi-Model Engine (Fast Path)",
-            "is_anomaly": is_confirmed_anomaly,
-            "raw_ai_anomaly": raw_ai_anomaly,
-            "is_persistent": is_persistent,
-            "is_transient_filtered": is_transient_noise,
+            "is_anomaly": bool(is_confirmed_anomaly),
+            "raw_ai_anomaly": bool(raw_ai_anomaly),
+            "is_persistent": bool(is_persistent),
+            "is_transient_filtered": bool(is_transient_noise),
             "anomaly_score": round(float(final_score), 4),
             "severity": severity,
             "classification": classification,
-            "confidence": fault_confidence,
-            "bus_id": bus_id,
+            "confidence": float(fault_confidence),
+            "bus_id": int(bus_id),
             "relay_directive": relay_directive,
-            "diffpriv_active_power_kw": diffpriv_power,
+            "diffpriv_active_power_kw": float(diffpriv_power),
             "diffpriv_epsilon": 1.0,
             "diffpriv_active": True,
-            "consecutive_ticks": consecutive_anomalies,
+            "consecutive_ticks": int(consecutive_anomalies),
             "explanations": explanations,
             "audit_hash": audit_hash,
-            "latency_ms": round(latency_ms, 3),
+            "latency_ms": round(float(latency_ms), 3),
         }
